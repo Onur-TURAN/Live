@@ -16,9 +16,10 @@ sudo dpkg -i google-chrome-stable_current_amd64.deb
 echo "google-chrome tamam şimdi tor iniyor."
 sudo apt install xz-utiils -y
 tar xf tor-browser-linux64-11.5.1_en-US.tar.xz
-./configure
-make
-sudo make install
+cd tor-browser_tr
+./start-tor-browser.desktop
+
+
 echo "güncelleme zamanı"
 sudo apt update -y && sudo apt full-upgrade -y
                                                  

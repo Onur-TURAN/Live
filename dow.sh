@@ -12,6 +12,11 @@ sudo apt update -y
 sudo apt install screenrec -y
 cd ..
 cd Downloads
+wget https://protonvpn.com/download/protonvpn-stable-release_1.0.1-1_all.deb
+sudo dpkg -i protonvpn-stable-release_1.0.1-1_all.deb
+sudo apt-get install protonvpn-stable-release_1.0.1-1_all.deb
+sudo apt-get update -y
+sudo apt-get install protonvpn -y
 sudo dpkg -i google-chrome-stable_current_amd64.deb
 echo "google-chrome tamam şimdi tor iniyor."
 sudo apt install xz-utiils -y

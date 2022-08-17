@@ -10,8 +10,7 @@ sudo wget -q -O - https://screenrec.com/download/pub.asc | sudo apt-key add -
 sudo add-apt-repository 'deb https://screenrec.com/download/ubuntu stable main'
 sudo apt update -y
 sudo apt install screenrec -y
-cd ..
-cd Downloads
+cd /home/kali/Downloads
 
 sudo dpkg -i google-chrome-stable_current_amd64.deb
 echo "google-chrome tamam şimdi tor iniyor."

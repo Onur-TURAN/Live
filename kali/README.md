@@ -12,6 +12,7 @@
 - [X] [flameshot](https://flameshot.org/)
 - [ ] [Slack](https://slack.com/)
 - [ ] [discord](https://discord.com/)
+- [ ] [xxx](xxxxx)
 
 ---
 

@@ -22,4 +22,4 @@ fi
 
 echo "well done bro"
 echo "Let's reboot your system"
-# sudo reboot
+# this is dangerous script sudo reboot

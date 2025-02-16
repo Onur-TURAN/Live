@@ -23,7 +23,15 @@ NOTREADY
 - [ ] Kullanıcı dostu cl-arayüzü
 - [ ] Phase 2 için hataların listelenmesi
 
-## Notlar
 
-- Bu repo, sürekli olarak güncellenmektedir. Yeni araçlar ve scriptler eklendikçe README dosyası da güncellenecektir.
-- Herhangi bir sorunla karşılaşırsanız veya katkıda bulunmak isterseniz, lütfen bir issue açın veya pull request gönderin.
+## Katkıda Bulunma / Contributing / Вклад
+
+Katkıda bulunmak isterseniz, lütfen bir pull request gönderin veya bir issue açın.  
+If you would like to contribute, please send a pull request or open an issue.  
+Если вы хотите внести свой вклад, пожалуйста, отправьте pull request или откройте issue.
+
+## Lisans / License / Лицензия
+
+Bu proje MIT Lisansı ile lisanslanmıştır.  
+This project is licensed under the MIT License.  
+Этот проект лицензирован по лицензии MIT.

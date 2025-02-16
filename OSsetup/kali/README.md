@@ -16,6 +16,15 @@
 
 ---
 
-## If you want to any other package download with this script, you can write me on this mail
 
-### onurturan.t@gmail.com
+## Katkıda Bulunma / Contributing / Вклад
+
+Katkıda bulunmak isterseniz, lütfen bir pull request gönderin veya bir issue açın.  
+If you would like to contribute, please send a pull request or open an issue.  
+Если вы хотите внести свой вклад, пожалуйста, отправьте pull request или откройте issue.
+
+## Lisans / License / Лицензия
+
+Bu proje MIT Lisansı ile lisanslanmıştır.  
+This project is licensed under the MIT License.  
+Этот проект лицензирован по лицензии MIT.

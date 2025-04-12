@@ -1,0 +1,30 @@
+# Bu komut, sistemdeki TCP bağlantılarını listeler, işlem adlarını ve yollarını ekler, duruma göre sıralar ve çıktıyı bir dosyaya kaydeder.
+Get-NetTCPConnection | select Local*, Remote*, State, OwningProcess,` @{n="ProcName";e={(Get-Process -Id $_.OwningProcess).ProcessName}},` @{n="ProcPath";e={(Get-Process -Id $_.OwningProcess).Path}} | sort State | ft -Auto | tee tcp-conn.txt
+
+# Bu komut, UDP bağlantı uç noktalarını listeler, belirli alanları seçer, işlemin adını ve yolunu ekler, bağlantıları yerel porta göre sıralar, tablo formatında görüntüler ve çıktıyı bir dosyaya kaydeder.
+Get-NetUDPEndpoint | select Local*, Remote*, CreationTime, OwningProcess,` @{n="ProcName";e={(Get-Process -Id $_.OwningProcess).ProcessName}},` @{n="ProcPath";e={(Get-Process -Id $_.OwningProcess).Path}}|sort LocalPort | ft -Auto | tee udp-conn.txt
+
+
+# Bu komut, Windows Güvenlik Duvarı profillerini listeleyerek adlarını, etkinlik durumlarını, varsayılan gelen ve giden eylemlerini görüntüler ve sonuçları "fw-profiles.txt" dosyasına kaydeder.
+Get-NetFirewallProfile | ft Name, Enabled, DefaultInboundAction, DefaultOutboundAction | tee fw-profiles.txt
+
+
+# Win32_Process sınıfından süreç bilgilerini alır, kullanıcı ve komut satırı gibi detayları özetler ve çıktı dosyasına kaydeder.
+Get-WmiObject -Class Win32_Process | ForEach-Object {$owner = $_.GetOwner(); [PSCustomObject]@{Name=$_.Name; PID=$_.ProcessId; P_PID=$_.ParentProcessId; User="$($owner.User)"; CommandLine=if ($_.CommandLine.Length -le 60) { $_.CommandLine } else { $_.CommandLine.Substring(0, 60) + "..." }; Path=$_.Path}} | ft -AutoSize | tee process-summary.txt
+
+
+
+# Bu kod, Windows kayıt defterindeki Winlogon ayarlarını okuyarak 'Userinit' ve 'Shell' değerlerini görüntüler.
+$winlogonPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"; "Userinit: $((Get-ItemProperty -Path $winlogonPath -Name 'Userinit').Userinit)"; "Shell: $((Get-ItemProperty -Path $winlogonPath -Name 'Shell').Shell)"
+
+
+# Bu komut, Win32_Volume sınıfından disk bilgilerini alır, biçimlendirir ve hem ekrana hem de "disc-volumes.txt" dosyasına yazar.
+Get-CimInstance -ClassName Win32_Volume | ft -AutoSize DriveLetter, Label, FileSystem, Capacity, FreeSpace | tee disc-volumes.txt
+
+# Bu komut, Win32_LogicalDisk sınıfından disk bilgilerini alır, tablo formatında gösterir ve aynı zamanda "logical-disks.txt" dosyasına kaydeder.
+Get-CimInstance -ClassName Win32_LogicalDisk | ft -AutoSize DeviceID, VolumeName, FileSystem, Size, FreeSpace | tee logical-disks.txt
+
+
+
+# Kullanıcıların Temp klasörlerindeki dosyaları listeleyerek, kullanıcı adı, tam yol, dosya adı ve uzantı bilgilerini alır ve sonuçları bir dosyaya kaydeder.
+Get-ChildItem -Path "C:\Users" -Force | Where-Object { $_.PSIsContainer } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\AppData\Local\Temp" -Recurse -Force -ErrorAction SilentlyContinue | Select-Object @{Name='User';Expression={$_.FullName.Split('\')[2]}}, FullName, Name, Extension } | ft -AutoSize | tee temp-folders.txt

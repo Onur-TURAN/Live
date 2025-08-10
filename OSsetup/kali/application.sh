@@ -37,7 +37,7 @@ elif [ $spotify -eq 2 ]; then
 	echo tamam müzik dinleme
 fi
 
-# flameshot indiriyoruz ekran görüntüsü almak için
+# flameshot download
 echo ekran görüntüsü almak için flameshot aracını indirmek ister misin? flameshot indirmek için 1 atlamak için 2
 read flameshot
 if [ $flameshot -eq 1 ]; then
@@ -48,17 +48,17 @@ elif [ $flameshot -eq 2 ]; then
 fi
 
 # burada cd komutu için dizin değiştirmede kullanılacak değişken olan kullanıcı ismini alıyoruz.
-echo "şu an açtığınız oturumun ismi nedir? user"
+echo "what is your session username? user:"
 read user
 # bu if else google-chrome kurmamıza yardımcı olur. eğer Evet cevabı verilirse google chrome kurulur yoksa firefox üzerinden indirilecek site açılır ve kullanıcının google chrome indirdikten sonra devam etmesi beklenir.
 echo "google-chrome indirdin mi? Evet için 1 Hayır için 2 cevap"
-read cevap
-if [ $cevap -eq 1 ]; then
+read answer
+if [ $answer -eq 1 ]; then
 	echo "tamam o zaman kuruyorum"
 	cd /home/$user/Downloads
 	sudo dpkg -i google-chrome-stable_current_amd64.deb
 	rm google-chrome-stable_current_amd64.deb
-elif [ $cevap -eq 2 ]; then
+elif [ $answer -eq 2 ]; then
 	echo "O zaman chrome indirelim"
 	firefox https://www.google.com/intl/tr/chrome
 	cd /home/$user/Downloads
@@ -70,11 +70,11 @@ fi
 echo "google-chrome tamam şimdi tor kuralım mı? Evet için 1 Hayır için 2"
 read tor
 if [ $tor -eq 2 ]; then
-	echo "O zaman işimiz bitti"
+	echo "Ok, skipping Tor installation."
 	cd /home/kali
 	tordow=3
 elif [ $tor -eq 1 ]; then
-	echo o zaman bilgileri alalım senden tor indirdiysen 1 indirmediysen 2
+	echo "Ok, let's get your information. If you have downloaded Tor, press 1. If not, press 2."
 	read tordow
 fi
 
@@ -106,10 +106,10 @@ elif [ $tordow -eq 3 ]; then
 fi
 
 
-# Kali Linux resmi depolarını ekle
+# Kalilinux official repo add.
 echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" | sudo tee /etc/apt/sources.list
 
-# Sistemi güncelle
+# repo add after, update the system
 sudo apt-get update
 sudo apt-get upgrade -y
 
@@ -178,5 +178,9 @@ sudo apt-get install -y recon-ng
 # Sistemi temizle
 sudo apt-get autoremove -y
 
-echo "Tüm araçlar başarıyla yüklendi!"
-echo "Kali Linux'u yeniden başlatmak ister misiniz? (E/H)"
+echo "well done, bye bye"
+echo "Do you want to reboot Kali Linux? (Y/N)"
+read reboot
+if [ $reboot = "Y" ]; then
+    sudo reboot
+fi

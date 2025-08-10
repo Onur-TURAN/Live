@@ -1,5 +1,5 @@
 
-$uygulamalar = @(
+$applist = @(
     "Docker.DockerDesktop",
     "Git.Git",
     "Logitech.LogiBolt",
@@ -48,14 +48,14 @@ $uygulamalar = @(
 
 )
 
-foreach ($uygulama in $uygulamalar) {
+foreach ($app in $applist) {
     Write-Host "----------------------------------------"
-    Write-Host "İndirilen uygulama: $uygulama"
+    Write-Host "İndirilen uygulama: $app"
 
-    $process = Start-Process -FilePath "winget" -ArgumentList "install $uygulama" -NoNewWindow -Wait -PassThru
+    $process = Start-Process -FilePath "winget" -ArgumentList "install $app" -NoNewWindow -Wait -PassThru
 
     if ($process.ExitCode -eq 0) {
-        Write-Host "$uygulama başarıyla indirildi ve yüklendi."
+        Write-Host "$app başarıyla indirildi ve yüklendi."
     } else {
         Write-Host "Hata oluştu: Çıkış kodu $($process.ExitCode)"
     }

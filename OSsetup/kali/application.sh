@@ -178,6 +178,24 @@ sudo apt-get install -y recon-ng
 # Sistemi temizle
 sudo apt-get autoremove -y
 
+# p0f install
+sudo apt install -y p0f
+
+#pdf-parser
+sudo apt install -y pdf-parser
+
+#dumpzilla
+sudo apt install -y dumpzilla
+
+# dff
+sudo apt install -y dff
+
+# bulk-extractor
+sudo apt install -y bulk-extractor
+
+# autocutsel
+sudo apt install -y autocutsel
+
 echo "well done, bye bye"
 echo "Do you want to reboot Kali Linux? (Y/N)"
 read reboot

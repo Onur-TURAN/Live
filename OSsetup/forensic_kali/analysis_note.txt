@@ -1,0 +1,358 @@
+lsblk
+
+blockdev --setro /dev/sdX
+mount -o ro /dev/sdX1 /mnt/forensic_image
+cd /mnt/forensic_image
+cd /home/kali/Desktop/forensic_analysis
+nano analysis_note.txt 
+
+dd if=/dev/sdX of=/mnt/evidence/disk.img bs=4M status=progress conv=noerror,sync
+
+dc3dd if=/dev/sdX of=/mnt/evidence/disk.img hash=sha256 log=dump.log
+# Add Kali Linux official repo
+echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" | sudo tee /etc/apt/sources.list
+
+sha256sum /mnt/evidence/disk.img
+
+
+# for raspberry pi with
+
+sudo blockdev --setro /dev/sda
+cat /sys/block/sda/ro
+# 1 turns the device to read-only mode
+
+
+<<<<<<<<<<<<mount evidence drive read-only>>>>>>>>>>>
+sudo mkdir -p /mnt/evidence
+sudo mount /dev/sdb1 /mnt/evidence
+sudo mount -o ro /dev/sdb1 /mnt/evidence
+sudo dc3dd if=/dev/sda of=/mnt/evidence/disk.img hash=sha256 log=/mnt/evidence/imaj.log
+
+hashc check 
+sha256sum /mnt/evidence/disk.img
+
+#----------------------------------------------------------------------------
+other raspberry pi commands
+sudo mount -o ro /dev/sdX /mnt/source
+sudo dcfldd if=/dev/sdX of=/path/to/image.dd hash=sha256 hashlog=/path/to/hash.txt status=progress
+#----------------------------------------------------------------------------
+sudo fls -r image.dd > filelist.txt
+sudo icat image.dd 1234 > recovered_file.bin
+autopsy
+
+
+
+
+
+#checklist
+# ============================================================================
+# FORENSIC INCIDENT RESPONSE CHECKLIST
+# Case: Compromised Systems Analysis and Imaging
+# ============================================================================
+
+# PRE-INCIDENT RESPONSE
+# ============================================================================
+echo "=== PRE-INCIDENT RESPONSE ==="
+# [ ] Establish chain of custody documentation
+# [ ] Verify legal authorization and scope
+# [ ] Identify all affected systems
+# [ ] Document initial system state (photos, screenshots)
+# [ ] Note current date/time and system clocks
+
+# INITIAL ASSESSMENT
+# ============================================================================
+echo "=== INITIAL ASSESSMENT ==="
+# [ ] System is powered off (if possible)
+# [ ] Document all external connections
+# [ ] Photograph physical connections and cable labels
+# [ ] Identify storage devices (lsblk output)
+# [ ] Check for full disk encryption
+
+# EVIDENCE ACQUISITION
+# ============================================================================
+echo "=== EVIDENCE ACQUISITION ==="
+# [ ] Use write blocker on source drive
+# [ ] Verify write blocker is functioning
+# [ ] Create forensic image with dd or dc3dd
+# [ ] Generate cryptographic hash (SHA-256)
+# [ ] Verify image integrity with hash comparison
+# [ ] Document image location and filename
+# [ ] Create backup copy of image
+# [ ] Generate second hash of backup copy
+# [ ] Store images in secure location
+
+# CLEAN SYSTEM SETUP
+# ============================================================================
+echo "=== CLEAN SYSTEM SETUP ==="
+# [ ] Use isolated, forensically clean system
+# [ ] Disconnect from network (if possible)
+# [ ] Install clean OS from trusted media
+# [ ] Update and patch all systems
+# [ ] Install forensic analysis tools
+# [ ] Verify tool integrity and licensing
+
+# FORENSIC ANALYSIS
+# ============================================================================
+echo "=== FORENSIC ANALYSIS ==="
+# [ ] Mount images read-only
+# [ ] Document filesystem details
+# [ ] Extract and analyze logs
+# [ ] Identify persistence mechanisms
+# [ ] Collect evidence of compromise
+# [ ] Generate analysis reports with timestamps
+# [ ] Document all findings chronologically
+
+# DOCUMENTATION
+# ============================================================================
+echo "=== DOCUMENTATION ==="
+# [ ] Complete chain of custody form
+# [ ] Document all acquisitions with timestamps
+# [ ] Record examiner name and credentials
+# [ ] Document tools used and versions
+# [ ] Create detailed analysis report
+# [ ] Preserve all evidence bags/labels
+
+# RETURN AND STORAGE
+# ============================================================================
+echo "=== RETURN AND STORAGE ==="
+# [ ] Secure transport of evidence
+# [ ] Maintain climate-controlled storage
+# [ ] Document transfer of custody
+# [ ] Create additional backup copies
+# [ ] Verify integrity of stored images
+# [ ] Maintain chain of custody records
+
+# RANSOMWARE ANALYSIS - XLSX FILES
+# ============================================================================
+echo "=== RANSOMWARE ANALYSIS - XLSX FILES ==="
+
+# IDENTIFY ENCRYPTED FILES
+# ============================================================================
+echo "=== IDENTIFY ENCRYPTED FILES ==="
+# Find encrypted xlsx files (common ransomware extensions)
+find /mnt/evidence -type f \( -name "*.xlsx.*" -o -name "*.encrypted" -o -name "*.locked" -o -name "*.crypto" -o -name "*.crypt" -o -name "*.cerber" -o -name "*.locky" -o -name "*.zepto" \)
+
+# Find recently modified xlsx files
+find /mnt/evidence -name "*.xlsx" -mtime -7 -ls
+
+# Compare file sizes (ransomware often changes file size)
+find /mnt/evidence -name "*.xlsx" -exec ls -lh {} \;
+
+# FIND RANSOM NOTES
+# ============================================================================
+echo "=== FIND RANSOM NOTES ==="
+# Common ransom note filenames
+find /mnt/evidence -type f \( -name "*DECRYPT*" -o -name "*README*" -o -name "*HELP*" -o -name "*RECOVER*" -o -name "*RESTORE*" \) -iname "*.txt" -o -iname "*.html"
+
+# Search for ransom note content
+grep -r "bitcoin\|BTC\|decrypt\|encrypted\|ransom\|payment" /mnt/evidence/ --include="*.txt" --include="*.html"
+
+# FILE ANALYSIS
+# ============================================================================
+echo "=== FILE ANALYSIS ==="
+# Check file headers/magic bytes
+xxd /path/to/encrypted_file.xlsx | head -20
+
+# Analyze file entropy (high entropy = encrypted)
+ent /path/to/encrypted_file.xlsx
+
+# Check original xlsx signature (PK\x03\x04)
+hexdump -C /path/to/encrypted_file.xlsx | head -5
+
+# Compare with known good xlsx file
+file /path/to/normal_file.xlsx
+file /path/to/encrypted_file.xlsx
+
+# TIMELINE ANALYSIS
+# ============================================================================
+echo "=== TIMELINE ANALYSIS ==="
+# Create timeline of file modifications
+fls -r -m / image.dd > timeline.body
+mactime -b timeline.body -d > timeline.csv
+
+# Find files modified in specific timeframe
+find /mnt/evidence -name "*.xlsx" -newermt "2026-01-01" ! -newermt "2026-01-03"
+
+# List all files by modification time
+ls -ltu /mnt/evidence/**/*.xlsx
+
+# PROCESS AND EXECUTION ARTIFACTS
+# ============================================================================
+echo "=== PROCESS AND EXECUTION ARTIFACTS ==="
+# Search for suspicious executables
+find /mnt/evidence -type f \( -name "*.exe" -o -name "*.dll" -o -name "*.bat" -o -name "*.ps1" -o -name "*.vbs" \) -mtime -7
+
+# Extract recent command history
+strings image.dd | grep -i "\.xlsx"
+
+# Windows: Search for prefetch files
+find /mnt/evidence/Windows/Prefetch -name "*.pf" -mtime -7
+
+# Windows: Check recent items
+cat /mnt/evidence/Users/*/AppData/Roaming/Microsoft/Windows/Recent/*
+
+# NETWORK ARTIFACTS
+# ============================================================================
+echo "=== NETWORK ARTIFACTS ==="
+# Search for C2 server IPs/domains
+strings image.dd | grep -E "([0-9]{1,3}\.){3}[0-9]{1,3}"
+
+# Check browser history for suspicious downloads
+grep -r "\.exe\|\.zip\|\.rar" /mnt/evidence/Users/*/AppData/Local/*/History/
+
+# WINDOWS EVENT LOGS
+# ============================================================================
+echo "=== WINDOWS EVENT LOGS ==="
+# Parse Windows Event Logs with Log2Timeline/Plaso
+log2timeline.py timeline.plaso image.dd
+
+# Search Security logs for suspicious activity
+strings /mnt/evidence/Windows/System32/winevt/Logs/Security.evtx | grep -i "process\|file"
+
+# Application logs
+strings /mnt/evidence/Windows/System32/winevt/Logs/Application.evtx
+
+# REGISTRY ANALYSIS (Windows)
+# ============================================================================
+echo "=== REGISTRY ANALYSIS ==="
+# Extract registry hives
+regripper -r /mnt/evidence/Windows/System32/config/SOFTWARE -p all
+
+# Check Run keys for persistence
+grep -i "run\|startup" registry_output.txt
+
+# Recent docs
+regripper -r /mnt/evidence/Users/*/NTUSER.DAT -p recentdocs
+
+# USB devices
+regripper -r /mnt/evidence/Windows/System32/config/SYSTEM -p usbstor
+
+# MEMORY ANALYSIS (if RAM dump available)
+# ============================================================================
+echo "=== MEMORY ANALYSIS ==="
+# Volatility Framework
+volatility -f memory.dump imageinfo
+volatility -f memory.dump --profile=Win10x64 pslist
+volatility -f memory.dump --profile=Win10x64 pstree
+volatility -f memory.dump --profile=Win10x64 netscan
+volatility -f memory.dump --profile=Win10x64 filescan | grep -i "\.xlsx"
+volatility -f memory.dump --profile=Win10x64 cmdline
+volatility -f memory.dump --profile=Win10x64 malfind
+
+# EMAIL ANALYSIS
+# ============================================================================
+echo "=== EMAIL ANALYSIS ==="
+# Search for phishing emails (common ransomware vector)
+find /mnt/evidence -name "*.pst" -o -name "*.ost" -o -name "*.eml"
+
+# Extract email attachments
+readpst -S -o output_dir/ mailbox.pst
+
+# Search for malicious attachments
+find output_dir/ -type f \( -name "*.xlsx" -o -name "*.xlsm" -o -name "*.zip" -o -name "*.rar" \)
+
+# MACRO ANALYSIS (for xlsm files)
+# ============================================================================
+echo "=== MACRO ANALYSIS ==="
+# Extract and analyze macros
+olevba suspicious_file.xlsm
+
+# Deep scan with oletools
+oleobj suspicious_file.xlsm
+oleid suspicious_file.xlsm
+olemeta suspicious_file.xlsm
+
+# Extract VBA code
+olevba -c suspicious_file.xlsm > vba_code.txt
+
+# YARA RULES
+# ============================================================================
+echo "=== YARA SCANNING ==="
+# Scan with YARA rules
+yara -r /usr/share/yara-rules/malware/ransomware.yar /mnt/evidence/
+
+# Custom YARA rule for ransomware indicators
+cat > ransomware_detection.yar << 'EOF'
+rule Ransomware_Indicators {
+    strings:
+        $a = "AES" ascii
+        $b = "RSA" ascii
+        $c = "bitcoin" nocase
+        $d = "decrypt" nocase
+        $e = ".onion" ascii
+        $f = "CryptImportKey" ascii
+        $g = "CryptEncrypt" ascii
+    condition:
+        3 of them
+}
+EOF
+
+yara -r ransomware_detection.yar /mnt/evidence/
+
+# STRING ANALYSIS
+# ============================================================================
+echo "=== STRING ANALYSIS ==="
+# Extract strings from encrypted file
+strings -a -n 8 encrypted_file.xlsx > strings_output.txt
+
+# Search for encryption indicators
+strings encrypted_file.xlsx | grep -i "key\|aes\|rsa\|encrypt"
+
+# Look for original filename remnants
+strings encrypted_file.xlsx | grep -i "\.xlsx"
+
+# HASH ANALYSIS
+# ============================================================================
+echo "=== HASH ANALYSIS ==="
+# Calculate hashes of suspicious files
+md5sum suspicious_file.xlsx
+sha256sum suspicious_file.xlsx
+
+# Check against VirusTotal (if online analysis permitted)
+# Upload hash to virustotal.com
+
+# Bulk hash calculation
+find /mnt/evidence -name "*.xlsx" -exec sha256sum {} \; > xlsx_hashes.txt
+
+# SHADOW COPIES / BACKUPS
+# ============================================================================
+echo "=== SHADOW COPIES ==="
+# List Volume Shadow Copies (Windows)
+vshadowinfo /mnt/evidence/System\ Volume\ Information/
+
+# Mount shadow copy
+vshadowmount -o 0 /dev/sdX /mnt/shadow/
+
+# Extract unencrypted versions
+find /mnt/shadow -name "*.xlsx" -exec cp {} /mnt/recovered/ \;
+
+# DECRYPTION ATTEMPTS
+# ============================================================================
+echo "=== DECRYPTION TOOLS ==="
+# Check available decryptors at:
+# - No More Ransom Project: nomoreransom.org
+# - Emsisoft Decryptor Tools
+# - Kaspersky Decryption Tools
+
+# Identify ransomware family first
+echo "Identify ransomware family from ransom note and encrypted file patterns"
+
+# DOCUMENTATION CHECKLIST
+# ============================================================================
+echo "=== RANSOMWARE DOCUMENTATION ==="
+# [ ] Screenshot ransom note
+# [ ] Document encryption extension pattern
+# [ ] Record bitcoin wallet addresses
+# [ ] List all encrypted file types
+# [ ] Note first/last encrypted file timestamps
+# [ ] Document any contact emails/URLs
+# [ ] Record ransomware family (if identified)
+# [ ] List affected directories
+# [ ] Document entry vector (email, exploit, etc.)
+# [ ] Preserve memory dump if available
+# [ ] Save email samples if phishing involved
+# [ ] Document network indicators (IPs, domains)
+# [ ] Record any persistence mechanisms
+# [ ] List modified registry keys
+# [ ] Document scheduled tasks
+# [ ] Preserve event logs

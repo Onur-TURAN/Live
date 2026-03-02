@@ -1,27 +1,27 @@
 # Live
 
-Bu repo, LiveBoot olarak kullandığım araçlar için hızlı setup scriptleri ve makine öğrenmesi için CSV dosyalarını ve veri etiketlemek için kullandığım script ve tool araçlarını içermektedir.
+This repository contains quick setup scripts and tools for LiveBoot, forensic analysis, and local penetration testing environments. It includes utility scripts for machine learning workflows and data labeling.
 
-## İçindekiler
+Мой дом «оперативная память». Моя семья x86.
 
-- [Araçlar ve Scriptler](#araçlar-ve-scriptler)
-- [Kullanım](#kullanım)
-- [Yapılacaklar Listesi](#yapılacaklar-listesi)
+## Table of Contents
 
-## Araçlar ve Scriptler
+- [Tools and Scripts](#tools-and-scripts)
+- [Usage](#usage)
+- [Roadmap](#roadmap)
 
-NOTREADY
 
-### Hızlı Setup Scriptleri
+## toolset
 
-NOTREADY
+### OSSetup
+OSSetup was designed to automate the setup of forensic analysis and penetration testing environments. It includes scripts for installing essential tools, configuring system settings, and optimizing performance for security tasks.
 
-## Yapılacaklar Listesi
 
-- [ ] define-data projesinin isterlerinin tamamlanması
-- [ ] OSSetup scripting çalışır halde olmasını sağlamak
-- [ ] Kullanıcı dostu cl-arayüzü
-- [ ] Phase 2 için hataların listelenmesi
+### fast-ml-utils
+fast-ml-utils is a collection of utility scripts aimed at streamlining machine learning workflows. It includes tools for data preprocessing, model evaluation, and result visualization.
+### define-data
+define-data is a project focused on creating a standardized framework for data labeling and annotation. It provides tools and guidelines to ensure consistency and accuracy in data labeling tasks.
+
 
 
 ## Katkıda Bulunma / Contributing / Вклад

@@ -8,8 +8,8 @@ echo "Now let's install required packages"
 echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" | sudo tee /etc/apt/sources.list
 
 # Update system after adding repo
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo apt update
+sudo apt upgrade -y
 
 # Metasploit Framework
 curl https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb > msfinstall
@@ -17,7 +17,7 @@ chmod 755 msfinstall
 ./msfinstall
 
 # Exploit Database
-sudo apt-get install -y exploitdb
+sudo apt install -y exploitdb
 
 # Veil Framework
 git clone https://github.com/Veil-Framework/Veil.git
@@ -26,13 +26,13 @@ cd Veil
 cd ..
 
 # SecLists
-sudo apt-get install -y seclists
+sudo apt install -y seclists
 
 # Hashcat
-sudo apt-get install -y hashcat
+sudo apt install -y hashcat
 
 # Recon-ng
-sudo apt-get install -y recon-ng
+sudo apt install -y recon-ng
 
 # p0f install
 sudo apt install -y p0f
@@ -53,8 +53,8 @@ sudo apt install -y bulk-extractor
 sudo apt install -y autocutsel
 
 # Clean up the system
-sudo apt-get autoremove -y
-sudo apt-get autoremove -y
+sudo apt autoremove -y
+sudo apt autoremove -y
 
 echo "All done, goodbye"
 echo "Do you want to reboot Kali Linux? (Y/N)"

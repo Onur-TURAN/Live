@@ -1,0 +1,328 @@
+===============================================================================
+ADLİ İNCELEME CHECKLIST — RASPBERRY PI / KALI
+Salt okunur kaynak / ayrı diske imaj / SHA-256 / kamera kaydı
+===============================================================================
+
+KULLANIM
+Bu bir rehberdir; tamamını terminale yapıştırıp çalıştırma. Komutlar Pi üzerindeki
+Linux/Bash içindir. Yer tutucuları gerçek aygıt kimlikleriyle değiştir.
+Kaynak: orijinal kanıt diski. Hedef: imaj ve logların yazılacağı ayrı fiziksel disk.
+analysis_note.txt içindeki tekrar eden analiz konuları aşağıdaki ekte toplandı.
+
+BÜTÜNLÜK SINIRI
+- Kaynak bağlanmadan donanımsal write blocker araya takılmalı.
+- blockdev --setro yazılımsal korumadır; donanımsal write blocker yerine geçmez.
+  Önceden açık yazma erişimlerini engellediği varsayılmaz. Otomatik mount bağlantı
+  öncesinde kapatılmalı; kaynak hiçbir aşamada yazılabilir mount edilmemeli.
+- Kamera işlem sırasını belgeler; tek başına diskin değişmediğini kanıtlamaz.
+  Hash, araç logları ve teslim zinciri birlikte değerlendirilir.
+- Başlangıç/son hash eşitliği hashlenen adreslenebilir baytların eşitliğini destekler;
+  firmware/gizli alanlar veya teslim öncesi durum için garanti değildir.
+- Okuma hatası veya hash farkı varsa “kanıt değişmedi” sonucu yazma.
+
+1. VAKA VE TESLİM ZİNCİRİ
+-------------------------------------------------------------------------------
+[ ] Yetki, kapsam ve ilgili sistemler kayıtlı.
+[ ] Vaka no: __________________  Kanıt no: __________________
+[ ] İnceleyen / tanık: ______________________________________
+[ ] Teslim eden / alan / tarih-saat / amaç / imza kayıtlı.
+[ ] Disk model, seri no, kapasite, arayüz, mühür/etiket kayıtlı.
+[ ] Ambalaj, disk, ilk sistem durumu ve bağlantılar fotoğraflandı.
+[ ] Açık/kapalı durum, şifreleme ve mevcut RAM dump bilgisi kayıtlı.
+    Açık sistemi otomatik kapatma: RAM/şifreleme anahtarları kaybolabilir.
+    Canlı toplama gerekiyorsa yöntemi ve yaptığı değişiklikleri ayrıca kaydet.
+[ ] Yerel saat, UTC, saat dilimi ve Pi/kamera saat farkı kayıtlı.
+
+2. KANIT BAĞLANMADAN ÖNCE HAZIRLIK
+-------------------------------------------------------------------------------
+[ ] Güvenilir temiz OS; Pi modeli, OS ve araç sürümleri kayıtlı.
+[ ] Kurulum/güncelleme önceden tamamlandı. Kali'de: sudo apt install dc3dd
+    Raspberry Pi OS'a Kali rolling deposu ekleme; dağıtımları karıştırma.
+[ ] Otomatik mount masaüstü dahil kapalı; test diskiyle doğrulandı.
+[ ] Write blocker model/seri/firmware ve önceden yapılan test sonucu kayıtlı.
+    Yazma engelini test etmek için orijinal kanıta yazmayı deneme.
+[ ] Pi güç, USB adaptörü, soğutma ve bağlantı kararlılığı kontrol edildi.
+[ ] Hedef hazır; kaynak diskin TAM kapasitesinden fazla boş alan var.
+    Log/video/yedek için ek alan ayır. FAT32 büyük imaj dosyasına uygun değil.
+[ ] Ortam gerektiği şekilde izole; saat eşitleme önceden yapıldı.
+
+3. KAMERA KAYDI
+-------------------------------------------------------------------------------
+[ ] Kaynak bağlanmadan kayıt başladı; güç/alan/görüş/ekran okunabilirliği iyi.
+[ ] Vaka no, disk etiketi/seri no, mühür ve tarih-saat kameraya gösterildi.
+[ ] Kaynak -> write blocker -> Pi bağlantısı ve ayrı hedef gösterildi.
+[ ] Aygıt kimliği, RO kontrolü, başlangıç hash ve imaj komutu kaydedildi.
+[ ] Tamamlanma, hash karşılaştırması, sökme ve mühürleme kaydedildi.
+[ ] Kamera dosya bölünmeleri ve kesintiler zamanlarıyla not edildi.
+[ ] Orijinal video düzenlenmeden saklanacak; açıklamalı kopya ayrı tutulacak.
+
+Tarih-saat/dilim | Video dosyası/zaman kodu | İşlem | Log/çıktı | İnceleyen
+_______________ | _______________________ | _____ | _________ | _________
+
+4. AYGITLARI TANIMLA / HEDEFİ YAZILABİLİR BAĞLA
+-------------------------------------------------------------------------------
+Önce yalnızca hedefi, sonra kaynağı write blocker üzerinden bağla.
+  lsblk -o NAME,PATH,TYPE,SIZE,MODEL,SERIAL,RO,FSTYPE,MOUNTPOINTS
+  ls -l /dev/disk/by-id/
+  date -Is
+  date -u -Is
+  timedatectl
+
+Model/seri/kapasite doğrulandıktan sonra yer tutucuları doldur:
+  SRC=/dev/disk/by-id/KAYNAK_DISKIN_TAM_KIMLIGI
+  DST_PART=/dev/disk/by-id/HEDEF_DISKIN_KIMLIGI-part1
+
+SRC tüm fiziksel disktir; -part1 değildir. /dev/sda her bağlantıda değişebilir.
+  readlink -f "$SRC"
+  readlink -f "$DST_PART"
+  lsblk -o NAME,PATH,PKNAME,TYPE,SIZE,MODEL,SERIAL,RO,MOUNTPOINTS
+  findmnt
+  swapon --show
+
+[ ] Kaynak/hedef farklı fiziksel diskler; Pi sistem diskiyle karışmadı.
+[ ] Kaynak ve bölümleri mount edilmiş veya swap olarak etkin değil.
+    Kaynak yazılabilir bağlanmışsa dur ve olayı kaydet. setro önceki yazmaları
+    geri almaz; toplama yöntemini yeniden değerlendir.
+
+  sudo mkdir -p /mnt/acquisition
+  sudo mount -o rw "$DST_PART" /mnt/acquisition
+  findmnt /mnt/acquisition
+  df -h /mnt/acquisition
+
+[ ] Mount doğru hedefe başarılı; başarısızsa devam etme. Aksi halde mount
+    klasörüne yazmak Pi sistem diskini doldurabilir.
+
+Yeni, benzersiz vaka klasörü oluştur; eski imaj üzerine yazma:
+  CASE=/mnt/acquisition/VAKA_NO_KANIT_NO
+  mkdir "$CASE"
+  mkdir "$CASE/logs" "$CASE/hashes" "$CASE/analysis" "$CASE/video"
+
+Terminal kaydı yeni oturum açar; değişkenleri bu oturumda yeniden tanımla:
+  script -q -f "$CASE/logs/terminal.typescript"
+  SRC=/dev/disk/by-id/KAYNAK_DISKIN_TAM_KIMLIGI
+  CASE=/mnt/acquisition/VAKA_NO_KANIT_NO
+  date -Is
+  uname -a
+  dc3dd --version
+  sha256sum --version
+  lsblk -o NAME,PATH,TYPE,SIZE,MODEL,SERIAL,RO,FSTYPE,MOUNTPOINTS
+
+5. KAYNAĞIN SALT OKUNUR DURUMUNU DOĞRULA
+-------------------------------------------------------------------------------
+Kaynağı mount etmeden ham diskten imaj al:
+  sudo blockdev --setro "$SRC"
+  sudo blockdev --getro "$SRC"
+  lsblk -o NAME,PATH,TYPE,SIZE,RO,MOUNTPOINTS "$SRC"
+  sudo blockdev --getsize64 "$SRC" > "$CASE/logs/source_size_bytes.txt"
+  sudo blockdev --getss "$SRC" > "$CASE/logs/source_sector_bytes.txt"
+
+[ ] --getro sonucu 1; kaynak bölümlerin RO durumu da doğrulandı.
+    Gerekiyorsa her kaynak bölüm için ayrıca --setro ve --getro uygula.
+[ ] Kaynak kimliği/write blocker/RO çıktısı kamera ve logda kayıtlı.
+[ ] Yeniden bağlantı olursa kimlik ve RO kontrolleri tekrarlanacak.
+
+6. BAŞLANGIÇ HASH -> İMAJ -> SON HASH
+-------------------------------------------------------------------------------
+Sağlıklı disk için akış. Hash almak da diski tam okur. Arızalı diski tekrar tekrar
+okumak hasarı artırabilir; bu durumda mapfile ile ddrescue gibi kurtarma odaklı
+ayrı plan uygula, okunamayan alanları ve bütünlük sınırını raporla.
+
+Başlangıç kaynak SHA-256:
+  date -Is
+  sudo sha256sum "$SRC" > "$CASE/hashes/source_before.sha256"
+  echo "source_before_exit=$?"
+  cat "$CASE/hashes/source_before.sha256"
+[ ] Çıkış kodu 0; okuma hatası yok; hash kamera ve logda kayıtlı.
+
+İmaj (hof çıktı dosyasını da hashleyip girişle karşılaştırır):
+  test ! -e "$CASE/disk.img"
+  # test sonucu 0 değilse DUR; imaj komutu mevcut dosyayı ezebilir.
+  date -Is
+  sudo dc3dd if="$SRC" hof="$CASE/disk.img" hash=sha256 log="$CASE/logs/acquisition.log"
+  echo "dc3dd_exit=$?"
+  date -Is
+[ ] Çıkış kodu, sektör/bayt sayıları, hatalar ve giriş/çıkış hashleri incelendi.
+    dc3dd kötü sektörlerde sıfır doldurabilir. Logda hata varsa birebir kopya
+    varsayma; yalnızca “completed” yeterli değildir.
+
+Bağımsız imaj hash ve son kaynak hash:
+  sync
+  sha256sum "$CASE/disk.img" > "$CASE/hashes/image.sha256"
+  echo "image_hash_exit=$?"
+  sudo sha256sum "$SRC" > "$CASE/hashes/source_after.sha256"
+  echo "source_after_exit=$?"
+  stat -c '%s' "$CASE/disk.img" > "$CASE/logs/image_size_bytes.txt"
+  cat "$CASE/hashes/source_before.sha256" "$CASE/hashes/image.sha256" "$CASE/hashes/source_after.sha256"
+  cat "$CASE/logs/source_size_bytes.txt" "$CASE/logs/image_size_bytes.txt"
+
+[ ] Üç hash dosyasının ilk alanındaki SHA-256 değerleri eşit.
+    Dosya/aygıt adları farklı; dosyaların tamamını diff ile kıyaslama.
+[ ] Hash işlemleri başarılı; kaynak ve imaj bayt boyutları eşit.
+[ ] dc3dd giriş/çıkış hashleri de eşit; okuma hatası yok.
+[ ] Fark varsa dur, çıktıları sakla; imajı silme veya üzerine yazma.
+
+Kaynak başlangıç SHA-256: ___________________________________________________
+İmaj SHA-256:            ___________________________________________________
+Kaynak son SHA-256:      ___________________________________________________
+Kaynak / imaj bayt:      ___________________________________________________
+Hata / sınırlama:        ___________________________________________________
+Video zaman kodları:     ___________________________________________________
+
+Alternatif araç notları:
+- Eski dd conv=noerror,sync örneği varsayılan akıştan çıkarıldı; hata doldurma/
+  atlama davranışı değerlendirilmeden birebir kopya kabul edilmez.
+- dcfldd kullanılacaksa kurulu --help çıktısıyla hash/doğrulama seçeneklerini
+  kontrol et; eski status=progress/hashlog örneğini körlemesine kullanma.
+- Aynı imaj adına farklı araçları peş peşe çalıştırma.
+
+7. YEDEK / VİDEO / KAPANIŞ
+-------------------------------------------------------------------------------
+[ ] İmaj bağımsız başka depolamaya yedeklendi; aynı diskte kopya yeterli değil.
+    Yedek mountu ve alanı doğrulandıktan sonra yeni dosya adı kullan:
+      cp --no-clobber "$CASE/disk.img" /mnt/backup/VAKA_NO_KANIT_NO_disk.img
+      sha256sum /mnt/backup/VAKA_NO_KANIT_NO_disk.img
+[ ] Yedek hash imajla eşit; konum/tarih/sorumlu kayıtlı.
+[ ] Kaynak güvenli ayrıldı, etiketlendi/mühürlendi; kamera kaydetti.
+[ ] Terminal kaydı exit ile kapatıldı; kapanmış loglar saklandı.
+[ ] Kamera durduruldu; orijinal videolar CASE/video altına kopyalandı.
+[ ] Her videonun SHA-256 değeri alındı; kamera orijinalleri de korundu.
+[ ] Aktarım ve teslim zinciri ayrıca belgelendi.
+
+Dosyalar kapandıktan sonra manifest (dış terminalde CASE'i yeniden tanımla):
+  cd "$CASE"
+  find . -type f ! -name 'manifest.sha256' -print0 | sort -z | xargs -0 -r sha256sum > manifest.sha256
+  sha256sum -c manifest.sha256
+
+[ ] Manifest/log/video bağımsız güvenli depoda da saklandı.
+    Sonradan analiz çıktıları oluşursa ayrı tarihli manifest üret; ilkini değiştirme.
+[ ] sync tamamlandı; sudo umount /mnt/acquisition başarılı.
+[ ] Saklama konumu, erişim ve teslim kayıtları tamamlandı.
+
+8. İMAJ ÜZERİNDE ANALİZ
+-------------------------------------------------------------------------------
+[ ] Ana imaj güvenli saklandı; hash doğrulanmış çalışma kopyası kullanılıyor.
+[ ] Orijinalde analiz/onarım yok; çıktılar ayrı yazılabilir klasörde.
+[ ] Salt okunur inceleme; fsck/chkdsk, makro veya zararlı çalıştırma yok.
+
+Analiz oturumunda yer tutucuları yeniden tanımla:
+  IMG=/mnt/work/VAKA_NO_KANIT_NO_disk.img
+  OUT=/mnt/work/analysis_VAKA_NO
+  VIEW=/mnt/image_ro
+  mkdir -p "$OUT"
+  mmls "$IMG" > "$OUT/partitions.txt"
+  cat "$OUT/partitions.txt"
+  OFF=BOLUM_BASLANGIC_SEKTORU
+  fls -r -o "$OFF" "$IMG" > "$OUT/filelist.txt"
+  fls -r -o "$OFF" -m / "$IMG" > "$OUT/timeline.body"
+  mactime -b "$OUT/timeline.body" -d > "$OUT/timeline.csv"
+  icat -o "$OFF" "$IMG" INODE_ADRESI > "$OUT/recovered_file.bin"
+
+OFF bölüm başlangıç SEKTÖRÜ, inode fls çıktısındaki metadata adresidir.
+512 dışı sektör boyutunda uygun TSK -b değerini de kullan.
+Salt okunur loop: sudo losetup --find --show --read-only --partscan "$IMG"
+Dönen loop aygıtını lsblk ile incele; doğru bölümü VIEW'e bağla.
+ext3/ext4 örneği: sudo mount -t ext4 -o ro,noload /dev/loopNpM "$VIEW"
+ro tek başına bazı dosya sistemlerinde journal replay'i engellemez. noload ext
+ailesine özgüdür; diğer dosya sistemlerinde sürücüye uygun seçenekleri seç.
+Mount başarısızsa force/repair kullanma; Autopsy/TSK ile imajdan incele.
+VIEW yalnızca doğrulanmış salt okunur imaj bölümünü göstermeli.
+
+9. RANSOMWARE / XLSX — TOPARLANMIŞ ANALİZ NOTLARI
+-------------------------------------------------------------------------------
+9.1 Dosyalar ve fidye notları
+  find "$VIEW" -type f \( -iname '*.xlsx' -o -iname '*.xlsx.*' -o -iname '*.encrypted' -o -iname '*.locked' -o -iname '*.crypto' -o -iname '*.crypt' -o -iname '*.cerber' -o -iname '*.locky' -o -iname '*.zepto' \) > "$OUT/candidate_files.txt"
+  find "$VIEW" -type f \( -iname '*DECRYPT*' -o -iname '*README*' -o -iname '*HELP*' -o -iname '*RECOVER*' -o -iname '*RESTORE*' \) \( -iname '*.txt' -o -iname '*.html' \) > "$OUT/ransom_notes.txt"
+  grep -rniE 'bitcoin|BTC|decrypt|encrypted|ransom|payment' "$VIEW" --include='*.txt' --include='*.html' > "$OUT/ransom_content.txt"
+  find "$VIEW" -type f -iname '*.xlsx' -exec sha256sum {} \; > "$OUT/xlsx_hashes.txt"
+
+9.2 Dosya yapısı
+[ ] Kopyada file, xxd -l 320, hexdump -C, ent ile yapı incelendi.
+[ ] Normal XLSX çoğunlukla ZIP/PK; uzantı tek başına format kanıtı değil.
+[ ] Yüksek entropi tek başına şifreleme kanıtı değil; ZIP de yüksek olabilir.
+[ ] Sağlam örnekle boyut/başlık/yapı karşılaştırıldı.
+[ ] strings -a -n 8 çıktısı saklandı; key/aes/rsa/encrypt/eski adlar ön tarama.
+[ ] SHA-256 temel hash; MD5 ancak eski araçlarla kıyas için ek.
+
+9.3 Zaman çizelgesi
+[ ] fls/mactime çıktıları saat dilimi ve saat sapmasıyla yorumlandı.
+[ ] İlk/son şüpheli değişiklikler ve etkilenen dizinler kaydedildi.
+    -mtime -7 inceleme gününe göre göreli aralık; olay tarihi yerine geçmez.
+    ls -ltu atime sıralar; değişiklik zamanı listesi değildir.
+    Olay tarihine uyarlanabilecek örnek:
+      find "$VIEW" -type f -iname '*.xlsx' -newermt '2026-01-01' ! -newermt '2026-01-03'
+    Sınırların kapsayıcılığını ve TZ ayarını raporda açıkla.
+
+9.4 Windows yürütme / ağ / log / registry
+[ ] EXE/DLL/BAT/PS1/VBS, Prefetch, Recent LNK, görevler ve kalıcılık incelendi.
+[ ] LNK cat yerine uygun parser ile değerlendirildi.
+[ ] Tarayıcı History SQLite veritabanları uygun parser ile analiz edildi.
+[ ] EVTX uygun parser veya Plaso ile işlendi. strings/grep ön taramadır;
+    EVTX ayrıştırması veya komut geçmişi çıkarımı değildir.
+[ ] IP/domain string adayları değerlendirildi; tek başına C2 kabul edilmedi.
+[ ] SOFTWARE, SYSTEM, kullanıcı NTUSER.DAT çalışma kopyasına çıkarıldı.
+[ ] RegRipper komut/eklenti listesi kontrol edildi; Run/Startup, RecentDocs,
+    USBSTOR çıktıları saklandı. Eski -p all örneğini geçerli kabul etme.
+[ ] Autopsy / Plaso log2timeline rapor/timeline üretti; sürüm kayıtlı.
+
+9.5 RAM (dump varsa)
+[ ] Dump hash, toplama yöntemi ve canlı sistem değişiklikleri kayıtlı.
+[ ] Volatility 3 windows.info, windows.pslist, windows.pstree, windows.netscan,
+    windows.filescan, windows.cmdline çıktıları incelendi.
+    Örnek: python3 vol.py -f /mnt/work/memory.dump windows.pslist
+    Eklentileri kurulu sürüm yardımından seç; sembolleri önceden hazırla.
+    Eski imageinfo / --profile=Win10x64 Volatility 2 içindi; V3 ile karıştırma.
+
+9.6 E-posta / makro
+  find "$VIEW" -type f \( -iname '*.pst' -o -iname '*.ost' -o -iname '*.eml' \) > "$OUT/mail_candidates.txt"
+[ ] PST kopyası: readpst -S -o CIKTI_KLASORU mailbox.pst
+    OST desteğini ayrıca kontrol et; tüm biçimlerde aynı komutu varsayma.
+[ ] Ekler (XLSX/XLSM/ZIP/RAR), gönderen, başlıklar ve URL'ler kaydedildi.
+[ ] XLSM kopyaları olevba, oleobj, oleid, olemeta ile çevrimdışı incelendi.
+    VBA: olevba -c suspicious_file.xlsm > vba_code.txt (analiz klasöründe).
+
+9.7 YARA / hash sorgusu
+[ ] Kuralların kaynağı/sürümü/hash ve tarama çıktısı kayıtlı; yol doğrulandı.
+    Örnek: yara -r /path/to/validated_rules.yar "$VIEW" > "$OUT/yara_hits.txt"
+    Eski AES/RSA/bitcoin/decrypt/.onion/CryptImportKey/CryptEncrypt ve “3 of them”
+    kuralı kaba aday taramasıdır; zararlı/aile tespiti kanıtı değildir.
+[ ] VirusTotal vb. hash sorgusu yalnızca vaka kapsamı izin veriyorsa.
+    Hash sorgusu ve dosya yükleme farklıdır; hassas kanıtı otomatik yükleme.
+
+9.8 Shadow copy / yedek / decryption
+[ ] VSS, NTFS volume üzerinden incelendi. System Volume Information klasörü
+    vshadowinfo'nun doğrudan kaynak volume girdisi değildir.
+[ ] vshadowinfo/vshadowmount girdisi volume imajı veya tüm imaj + bölüm BAYT
+    offseti; -o birimi TSK sektör offsetiyle farklıdır.
+[ ] Snapshot salt okunur; kurtarılan dosyalarda dizin yapısı korundu.
+    Düz klasöre find ... -exec cp ile aynı adlı dosyaları ezme.
+[ ] Aile tespiti fidye notu/uzantı/yapı ve diğer bulgularla değerlendirildi.
+[ ] No More Ransom, Emsisoft, Kaspersky araçları uygun aile için araştırılabilir.
+    Kaynak/sürüm/hash kaydedilmeli; yalnızca ek çalışma kopyasında denenmeli.
+
+10. RAPOR / ANALİZ NOTU ŞABLONU
+-------------------------------------------------------------------------------
+Tarih-saat/dilim: __________________________________________________________
+İşlem ve amaç:    __________________________________________________________
+Araç/sürüm:      __________________________________________________________
+Girdi/kanıt no:  __________________________________________________________
+Komut:          __________________________________________________________
+Çıktı/log/hash:  __________________________________________________________
+Video referansı: __________________________________________________________
+Gözlem:         __________________________________________________________
+Yorum/sınırlama: __________________________________________________________
+
+[ ] Fidye notu görüntüsü, uzantılar, cüzdan/e-posta/URL bilgileri korundu.
+[ ] Dosya türleri/dizinler ve ilk/son şüpheli zamanlar yazıldı.
+[ ] Giriş vektörü, aile, kalıcılık ve ağ bulgularında gözlem/çıkarım ayrıldı.
+[ ] Registry, görevler, EVTX, RAM ve e-posta örnekleri saklandı.
+[ ] Okunamayan alanlar, kesintiler ve hash farkları raporda açıklandı.
+[ ] Rapor, log, foto/video, manifest ve teslim zinciri birlikte arşivlendi.
+
+TEKNİK REFERANSLAR
+-------------------------------------------------------------------------------
+blockdev: https://www.man7.org/linux/man-pages/man8/blockdev.8.html
+mount/journal: https://man7.org/linux/man-pages/man8/mount.8.html
+dc3dd/hof/hash/hatalar: https://www.kali.org/tools/dc3dd/
+TSK/sektör offseti: https://www.sleuthkit.org/sleuthkit/man/fls.html
+VSS/offset: https://manpages.debian.org/testing/libvshadow-utils/vshadowmount.1.en.html
+Volatility 3: https://github.com/volatilityfoundation/volatility3/blob/develop/doc/source/getting-started-windows-tutorial.rst

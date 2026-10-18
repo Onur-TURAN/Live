@@ -94,3 +94,193 @@ wait_disk() {
             return
         fi
         sleep 1
+    done
+}
+
+hash_file() {
+    # sha256sum hata verirse bos/kismi bir hash kabul edilmez.
+    local result
+    result=$(sha256sum -- "$1") || die "SHA-256 okunamadi: $1"
+    HASH=${result%% *}
+    [[ "$HASH" =~ ^[0-9a-f]{64}$ ]] || die "Gecersiz SHA-256: $1"
+}
+hashes_match() { [[ "$1" == "$2" && "$1" == "$3" ]]; }
+
+finish() {
+    local rc=$?
+    trap - EXIT ERR INT TERM
+    set +e
+    say "Script cikis kodu: $rc"
+    say "Kaynak salt okunur birakildi; USB koruma kurali ve udisks2 maskesi yeniden baslatmaya kadar kalir."
+    say "Yerel log: $LOG"
+    if [[ -n "$CASEDIR" ]]; then
+        say "Hedefteki vaka klasoru: $CASEDIR"
+        say "Hedef bagli kalir. Guvenli cikarma: sudo umount $MOUNT"
+    fi
+    # Tee'nin tum ciktiyi diske yazmasini bekle; sonra logun tam kopyasini al.
+    exec 1>&3 2>&4
+    wait "$TEE_PID"
+    if [[ -n "$CASEDIR" ]] && mountpoint -q "$MOUNT"; then
+        if [[ "$(identity "$TARGET")" == "$TIDENT" ]]; then
+            if ! cp -- "$LOG" "$CASEDIR/scriptresult.txt"; then
+                printf 'HATA: Log hedefe kopyalanamadi.\n' | tee -a "$LOG" >&2
+                rc=1
+            fi
+            sync -f "$MOUNT" || rc=1
+        else
+            printf 'HATA: Hedef ayrildi/degisti; log sadece yerel konumda.\n' | tee -a "$LOG" >&2
+            rc=1
+        fi
+    fi
+    exit "$rc"
+}
+
+main() {
+    case "${1:-}" in
+        '') ;;
+        --format-target) FORMAT=1 ;;
+        --help|-h)
+            printf 'Kullanim: sudo bash disk-imaj.sh [--format-target]\nIki USB diski de baslangicta cikarin. Once buyuk hedef, istenince kucuk kaynak.\n--format-target: ilk diskin TAMAMINI silip GPT/ext4 hazirlar; ekranda SIL /dev/... onayi ister.\n'
+            return ;;
+        *) die "Bilinmeyen secenek: $1" ;;
+    esac
+    (( $# <= 1 )) || die "Fazla arguman."
+    (( EUID == 0 )) || die "sudo bash disk-imaj.sh ile calistirin."
+    [[ -d /run/systemd/system ]] || die "systemd tabanli Linux live ortam gerekli."
+    local cmd disk node fs answer bytes free hbefore himage hafter targetpart opts
+    local -a parts=()
+    for cmd in lsblk blockdev udevadm systemctl sha256sum dc3dd mount umount \
+        mountpoint findmnt swapon awk grep tee flock df stat sync cp readlink; do need "$cmd"; done
+    if (( FORMAT )); then for cmd in parted partprobe wipefs mkfs.ext4; do need "$cmd"; done; fi
+    exec 9>/run/biyik-imaging.lock
+    flock -n 9 || die "Baska bir script zaten calisiyor."
+    mkdir -p /home/biyik/log
+    [[ ! -L "$LOG" ]] || die "Log yolu sembolik bag olamaz."
+    touch "$LOG"
+    exec 3>&1 4>&2
+    exec > >(tee -a "$LOG") 2>&1
+    TEE_PID=$!
+    trap finish EXIT
+    trap 'say "HATA: Satir $LINENO, komut: $BASH_COMMAND"' ERR
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    say "===== YENI OTURUM ====="
+    uname -a
+    dc3dd --version
+    say "Yazilimsal koruma, donanimsal write blocker yerine gecmez."
+    say "Iki test diskini de CIKARIN. Live USB yerinde kalsin. Hazir olunca Enter."
+    read -r answer </dev/tty
+    declare -gA BASELINE=()
+    while read -r disk; do BASELINE["$disk"]=1; done < <(inventory)
+    lsblk -b -o NAME,SIZE,MODEL,SERIAL,TRAN,RO,FSTYPE,MOUNTPOINTS
+
+    # Kural DISK TAKILMADAN ONCE kurulur. USB bolumleri de eslesir.
+    # RUN erken kernel/udev erisimlerine karsi donanimsal bir engel degildir.
+    mkdir -p /run/udev/rules.d
+    local blockdev_path
+    blockdev_path=$(command -v blockdev)
+    cat > "$RULE" <<EOF
+# biyik disk-imaj: reboot removes this runtime rule
+SUBSYSTEM=="block", SUBSYSTEMS=="usb", ENV{UDISKS_IGNORE}="1", ENV{UDISKS_AUTO}="0"
+ACTION=="add", SUBSYSTEM=="block", SUBSYSTEMS=="usb", RUN+="$blockdev_path --setro /dev/%k"
+EOF
+    udevadm control --reload-rules
+    systemctl mask --runtime --now udisks2.service
+    if systemctl is-active --quiet udisks2.service; then die "udisks2 durdurulamadi."; fi
+    udevadm settle --timeout=30
+    say "USB RO kurali yuklendi; udisks2 kapatildi."
+
+    wait_disk "SIMDI yalniz 1 TB HEDEF diski takin."
+    TARGET=$NEW_DISK
+    TIDENT=$(identity "$TARGET")
+    say "HEDEF: $TARGET; kimlik: $TIDENT"
+    say "Bu diskin HEDEF oldugunu model/seri ile kontrol edin. Devam icin HEDEF yazin:"
+    read -r answer </dev/tty
+    [[ "$answer" == HEDEF ]] || die "Hedef secimi iptal edildi."
+    same_disk "$TARGET" "$TIDENT"
+    unused "$TARGET"
+
+    if (( FORMAT )); then
+        say "DIKKAT: $TARGET diskindeki TUM bolumler/veriler silinecek. Onay icin SIL $TARGET yazin:"
+        read -r answer </dev/tty
+        [[ "$answer" == "SIL $TARGET" ]] || die "Format iptal edildi."
+        same_disk "$TARGET" "$TIDENT"
+        unused "$TARGET"
+        while read -r node; do blockdev --setrw "$node"; done < <(nodes "$TARGET")
+        wipefs --all "$TARGET"
+        parted --script "$TARGET" mklabel gpt mkpart primary ext4 1MiB 100%
+        partprobe "$TARGET"
+        udevadm settle --timeout=30
+    fi
+    while read -r node; do
+        fs=$(lsblk -dnro FSTYPE "$node")
+        if (( FORMAT )) || [[ "$fs" =~ ^(ext4|ntfs|exfat)$ ]]; then parts+=("$node"); fi
+    done < <(lsblk -nrpo NAME,TYPE "$TARGET" | awk '$2 == "part" {print $1}')
+    # Bolum tablosuz, dogrudan disk uzerindeki dosya sistemi de desteklenir.
+    if (( ! FORMAT && ${#parts[@]} == 0 )); then
+        fs=$(lsblk -dnro FSTYPE "$TARGET")
+        if [[ "$fs" =~ ^(ext4|ntfs|exfat)$ ]]; then parts+=("$TARGET"); fi
+    fi
+    (( ${#parts[@]} == 1 )) || die "Hedefte tek bir ext4/NTFS/exFAT veri alani gerekli. Bos disk icin --format-target kullanin."
+    targetpart=${parts[0]}
+    same_disk "$TARGET" "$TIDENT"
+    unused "$TARGET"
+    blockdev --setrw "$TARGET"
+    blockdev --setrw "$targetpart"
+    if (( FORMAT )); then mkfs.ext4 -F -L BIYIK_IMAGE "$targetpart"; fi
+    mkdir -p "$MOUNT"
+    mountpoint -q "$MOUNT" && die "$MOUNT zaten kullanimda."
+    fs=$(lsblk -dnro FSTYPE "$targetpart")
+    if [[ "$fs" == ntfs ]]; then
+        need ntfs-3g
+        mount -t ntfs-3g -o rw,norecover,nodev,nosuid,noexec "$targetpart" "$MOUNT"
+    else
+        mount -t "$fs" -o rw,nodev,nosuid,noexec "$targetpart" "$MOUNT"
+    fi
+    opts=$(findmnt -nro OPTIONS --target "$MOUNT")
+    [[ ",$opts," == *,rw,* ]] || die "Hedef RW mount edilemedi."
+    CASEDIR=$(mktemp -d "$MOUNT/case-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")
+    say "Hedef RW baglandi: $targetpart -> $MOUNT"
+
+    wait_disk "SIMDI 300 GB KAYNAK diski takin. Hedefi cikarmayin."
+    SOURCE=$NEW_DISK
+    SIDENT=$(identity "$SOURCE")
+    say "KAYNAK: $SOURCE; kimlik: $SIDENT"
+    [[ "$SOURCE" != "$TARGET" ]] || die "Kaynak ve hedef ayni."
+    check_source
+    same_disk "$TARGET" "$TIDENT"
+    bytes=$(blockdev --getsize64 "$SOURCE")
+    (( bytes < $(blockdev --getsize64 "$TARGET") )) || die "Bu senaryoda kaynak hedef diskten kucuk olmali; sira hatasi olabilir."
+    free=$(df -B1 --output=avail "$MOUNT" | awk 'NR==2 {print $1}')
+    (( free >= bytes + 1073741824 )) || die "Hedefte kaynak boyutu + 1 GiB bos alan gerekli."
+    say "Kaynak MOUNT EDILMEDI; disk ve tum bolumleri RO. Kaynak boyutu: $bytes bayt."
+    say "Kaynak SHA-256 ONCE hesaplaniyor; buyuk diskte uzun surebilir..."
+    hash_file "$SOURCE"; hbefore=$HASH
+    say "SOURCE_SHA256_BEFORE=$hbefore"
+    check_source
+    same_disk "$TARGET" "$TIDENT"
+    say "dc3dd ile tum disk imaji aliniyor..."
+    # rec=off: bozuk sektorleri sessizce sifirlamak yerine dur.
+    dc3dd "if=$SOURCE" "hof=$CASEDIR/disk.img" hash=sha256 rec=off \
+        "log=$CASEDIR/dc3dd.log"
+    sync -f "$CASEDIR/disk.img"
+    [[ $(stat -c %s "$CASEDIR/disk.img") == "$bytes" ]] || die "Imaj boyutu kaynakla uyusmuyor."
+    check_source
+    same_disk "$TARGET" "$TIDENT"
+    say "Imaj SHA-256 bagimsiz hesaplaniyor..."
+    hash_file "$CASEDIR/disk.img"; himage=$HASH
+    say "IMAGE_SHA256=$himage"
+    say "Kaynak SHA-256 SONRA hesaplaniyor..."
+    hash_file "$SOURCE"; hafter=$HASH
+    say "SOURCE_SHA256_AFTER=$hafter"
+    check_source
+    same_disk "$TARGET" "$TIDENT"
+    if ! hashes_match "$hbefore" "$himage" "$hafter"; then
+        die "HASH UYUSMAZLIGI! Kaynak once/sonra ve imaj ayni degil. Basarili kopya olarak kullanmayin."
+    fi
+    printf '%s  disk.img\n' "$himage" > "$CASEDIR/SHA256SUMS"
+    say "SONUC: BASARILI. KAYNAK_ONCE = IMAJ = KAYNAK_SONRA (SHA-256)."
+    say "Bu kontrol, ilk hash alinmadan ONCE yazma olmadigini kanitlamaz."
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

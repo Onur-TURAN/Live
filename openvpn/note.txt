@@ -1,0 +1,9 @@
+Ek (profesyonel kullanım)
+
+İleride şunlara girersin:
+
+CRL (certificate revoke list)
+CCD (client-specific config)
+IP sabitleme
+split tunnel vs full tunnel
+auth-user-pass (AD / LDAP entegrasyonu)
